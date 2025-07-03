@@ -15,7 +15,13 @@
 
 ## ⚙️ Setup Instructions
 
-### 1. Clone the Repository
+git clone https://github.com/Deevesh1826/BotTraffic.git
+
+cd BotTraffic/dependencies
+
+chmod +x start.sh
+
+./start.sh
 
 Ram Ram Bhaiyo 🙏
 
