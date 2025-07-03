@@ -15,7 +15,7 @@
 
 ## ⚙️ Setup Instructions
 
-git clone https://github.com/Deevesh1826/Spy-Any-One
+git clone https://github.com/Deevesh1826/Spy-Any-One-.git
 
 cd Spy-Any-One
 
