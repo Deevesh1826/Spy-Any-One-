@@ -15,13 +15,16 @@
 
 ## ⚙️ Setup Instructions
 
-git clone https://github.com/Deevesh1826/BotTraffic.git
+git clone https://github.com/Deevesh1826/Spy-Any-One
 
-cd BotTraffic/dependencies
+cd Spy-Any-One
 
 chmod +x start.sh
 
 ./start.sh
+
+
+
 
 Ram Ram Bhaiyo 🙏
 
