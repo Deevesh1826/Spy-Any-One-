@@ -17,7 +17,7 @@
 
 git clone https://github.com/Deevesh1826/Spy-Any-One-.git
 
-cd Spy-Any-One
+cd Spy-Any-One-
 
 chmod +x start.sh
 
