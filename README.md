@@ -42,3 +42,5 @@ Tu agar HTML modify kar leta hai, to iska interface Facebook, Instagram, Google 
 🤝 Support
 Telegram pe koi dikkat aaye to likh diyo, bhai milke help karega.
 Enjoy kar bhai tool ko aur share kar sab ke saath! 😎
+id  https://t.me/devil_shadow2005
+
